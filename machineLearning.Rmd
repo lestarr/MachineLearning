@@ -1,0 +1,84 @@
+---
+title: "Machine Learning. Prediction of the manner of an exercise"
+author: "lestarr"
+date: "January 25, 2016"
+output: html_document
+---
+
+This is a report about training the model for recognition of the manner of doing an exercise.
+The training data are from here: https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+The description of the project and the data collected is here: http://groupware.les.inf.puc-rio.br/har
+
+```{r, echo =FALSE, results='hide',message=FALSE, warning=FALSE}
+#Goal: predict the manner of doing an excercize on several measurement
+setwd("C:\\2Projects\\DataAnalysis\\Rprogs\\wdir")
+
+library(YaleToolkit)
+library(dplyr)
+library(caret)
+
+# prepare parallel processing
+library(parallel)
+library(doParallel)
+cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
+registerDoParallel(cluster)
+#load data
+train <- read.csv("data/pml-training.csv")
+test <- read.csv("data/pml-testing.csv")
+```
+
+After downloading and loading the data the training data were split into train and test part:
+
+```{r}
+# split into train and test
+set.seed(1567)
+inTrain <- createDataPartition(train$classe, p = 0.7, list = FALSE)
+train_main <- train[inTrain,]
+test_main <- train[-inTrain,]
+``` 
+
+Then the possible predictors were considered. Many of the columns (predictors) contains very sparse data. I decided to eliminate them and try to build the prediction model firstly on the predictors which don't have NA's. The sorting out of the sparse predictors was done with the whatis() function from the YaleToolkit library:
+
+```{r}
+#exploratory analysis - look at the predictors, eliminate sparse predictors
+whatis_train <- whatis(train)
+# unique() of whatis() shows only 2 values - 0 and 19216, so we eliminate every predictor, which has more than 0 missing values.
+whatis_train[15:20,]
+missing <- which(whatis_train$missing > 0)
+train_clean <- train_main[,-missing]
+dim(train_clean)
+```
+ There were still many predictors left, among them many factors with empty values. The easy way was to eliminate the factors and to try to build the model with remained numeric predictors. After evaluating of the goodness of this easy model, we could take a look at this factors if necessary.
+ 
+```{r}
+nums <- sapply(train_clean,is.numeric) #find numerics
+classe <- train_clean$classe # save output factor variable
+train_clean_nums <- train_clean[,nums] # 
+train_clean_nums <- cbind(train_clean_nums, classe)
+```
+
+I decided to train the random forest model, as there were many statements that this kind of model should do very well on the data (see link above).
+The standard bootstrap method in trainControl I replaced with cross validation with 2 folds, to save the training time:
+
+```{r}
+fitControl_parCV2 <- trainControl(allowParallel = TRUE, method = "cv", number = 2)
+#to save the time and memory the model, described belove will be loaded from saved object
+#rf<- train(classe~., method = "rf", data = train_clean_nums,  prox=TRUE, trControl = fitControl_parCV2)
+load(file = "rf_model.rda")
+rf
+```
+
+When looking at the model we see that a model with very high accuracy (0.9998) was picked even with the simple 2-fold cross validation
+```{r, echo =FALSE, results='hide',message=FALSE, warning=FALSE}
+stopCluster(cluster) # close cluster for parallel computing
+```
+
+The accuracy of prediction was good, so I decided to leave the model as it is. The confusionMatrix shows that all the classes in the test set were predicted correctly. 
+
+```{r, message=FALSE, warning=FALSE}
+pred <- predict(rf, test_main)
+confusionMatrix(pred, test_main$classe)
+```
+
+The random forest model trained with the 5-fold cross validation showed the same metrics so we stay with the model that takes less time to be trained.
+
