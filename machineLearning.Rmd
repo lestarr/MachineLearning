@@ -57,23 +57,29 @@ train_clean_nums <- train_clean[,nums] #
 train_clean_nums <- cbind(train_clean_nums, classe)
 ```
 
+The model trained with this set of predictors showed definite features of overfitting, whis accuracy = 1.
+
+Looking at the correlation matrix of remained predictors showed that the first 4 predictors are potentially bad, because their correlation values are near 0. So they were also deleted:
+```{r}
+train_last <- train_clean_nums[,c(-1,-2,-3,-4)]
+```
 I decided to train the random forest model, as there were many statements that this kind of model should do very well on the data (see link above).
 The standard bootstrap method in trainControl I replaced with cross validation with 2 folds, to save the training time:
 
 ```{r}
 fitControl_parCV2 <- trainControl(allowParallel = TRUE, method = "cv", number = 2)
 #to save the time and memory the model, described belove will be loaded from saved object
-#rf<- train(classe~., method = "rf", data = train_clean_nums,  prox=TRUE, trControl = fitControl_parCV2)
-load(file = "rf_model.rda")
+#rf<- train(classe~., method = "rf", data = train_last,  prox=TRUE, trControl = fitControl_parCV2)
+load(file = "rf.mod")
 rf
 ```
 
-When looking at the model we see that a model with very high accuracy (0.9998) was picked even with the simple 2-fold cross validation
+When looking at the model we see that a model with very high accuracy (0.98) was picked even with the simple 2-fold cross validation
 ```{r, echo =FALSE, results='hide',message=FALSE, warning=FALSE}
 stopCluster(cluster) # close cluster for parallel computing
 ```
 
-The accuracy of prediction was good, so I decided to leave the model as it is. The confusionMatrix shows that all the classes in the test set were predicted correctly. 
+The accuracy of prediction was good, so I decided to leave the model as it is. The confusionMatrix shows that almost all the classes in the test set were predicted correctly with the overall accuracy 0.99
 
 ```{r, message=FALSE, warning=FALSE}
 pred <- predict(rf, test_main)

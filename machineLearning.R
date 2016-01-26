@@ -47,8 +47,12 @@ library(parallel)
 library(doParallel)
 cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
 registerDoParallel(cluster)
+
+#first 4 predictors lead to overfitting, remove them
+train_last <- train_clean_nums[,c(-1,-2,-3,-4)]
+
 fitControl_parCV2 <- trainControl(allowParallel = TRUE, method = "cv", number = 2)
-system.time(rf<- train(classe~., method = "rf", data = train_clean_nums,  prox=TRUE, trControl = fitControl_parCV2))
+system.time(rf<- train(classe~., method = "rf", data = train_last,  prox=TRUE, trControl = fitControl_parCV2))
 
 stopCluster(cluster)
  

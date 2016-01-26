@@ -103,16 +103,19 @@ dim(train_clean)</code></pre>
 classe &lt;- train_clean$classe # save output factor variable
 train_clean_nums &lt;- train_clean[,nums] # 
 train_clean_nums &lt;- cbind(train_clean_nums, classe)</code></pre>
+<p>The model trained with this set of predictors showed definite features of overfitting, whis accuracy = 1.</p>
+<p>Looking at the correlation matrix of remained predictors showed that the first 4 predictors are potentially bad, because their correlation values are near 0. So they were also deleted:</p>
+<pre class="r"><code>train_last &lt;- train_clean_nums[,c(-1,-2,-3,-4)]</code></pre>
 <p>I decided to train the random forest model, as there were many statements that this kind of model should do very well on the data (see link above). The standard bootstrap method in trainControl I replaced with cross validation with 2 folds, to save the training time:</p>
 <pre class="r"><code>fitControl_parCV2 &lt;- trainControl(allowParallel = TRUE, method = &quot;cv&quot;, number = 2)
 #to save the time and memory the model, described belove will be loaded from saved object
-#rf&lt;- train(classe~., method = &quot;rf&quot;, data = train_clean_nums,  prox=TRUE, trControl = fitControl_parCV2)
-load(file = &quot;rf_model.rda&quot;)
+#rf&lt;- train(classe~., method = &quot;rf&quot;, data = train_last,  prox=TRUE, trControl = fitControl_parCV2)
+load(file = &quot;rf.mod&quot;)
 rf</code></pre>
 <pre><code>## Random Forest 
 ## 
 ## 13737 samples
-##    56 predictor
+##    52 predictor
 ##     5 classes: 'A', 'B', 'C', 'D', 'E' 
 ## 
 ## No pre-processing
@@ -120,48 +123,48 @@ rf</code></pre>
 ## Summary of sample sizes: 6869, 6868 
 ## Resampling results across tuning parameters:
 ## 
-##   mtry  Accuracy   Kappa      Accuracy SD   Kappa SD    
-##    2    0.9959233  0.9948429  2.471201e-03  3.126533e-03
-##   29    0.9998544  0.9998159  1.498860e-08  2.281908e-08
-##   56    0.9997088  0.9996317  2.059284e-04  2.604697e-04
+##   mtry  Accuracy   Kappa      Accuracy SD   Kappa SD   
+##    2    0.9828928  0.9783552  0.0015459996  0.001955173
+##   27    0.9818738  0.9770671  0.0003069816  0.000388398
+##   52    0.9766327  0.9704327  0.0048362081  0.006121603
 ## 
 ## Accuracy was used to select the optimal model using  the largest value.
-## The final value used for the model was mtry = 29.</code></pre>
-<p>When looking at the model we see that a model with very high accuracy (0.9998) was picked even with the simple 2-fold cross validation</p>
-<p>The accuracy of prediction was good, so I decided to leave the model as it is. The confusionMatrix shows that all the classes in the test set were predicted correctly.</p>
+## The final value used for the model was mtry = 2.</code></pre>
+<p>When looking at the model we see that a model with very high accuracy (0.98) was picked even with the simple 2-fold cross validation</p>
+<p>The accuracy of prediction was good, so I decided to leave the model as it is. The confusionMatrix shows that almost all the classes in the test set were predicted correctly with the overall accuracy 0.99</p>
 <pre class="r"><code>pred &lt;- predict(rf, test_main)
 confusionMatrix(pred, test_main$classe)</code></pre>
 <pre><code>## Confusion Matrix and Statistics
 ## 
 ##           Reference
 ## Prediction    A    B    C    D    E
-##          A 1674    0    0    0    0
-##          B    0 1139    0    0    0
-##          C    0    0 1026    0    0
-##          D    0    0    0  964    0
-##          E    0    0    0    0 1082
+##          A 1674    4    0    0    0
+##          B    0 1133    9    0    0
+##          C    0    2 1017   16    1
+##          D    0    0    0  946    1
+##          E    0    0    0    2 1080
 ## 
 ## Overall Statistics
-##                                      
-##                Accuracy : 1          
-##                  95% CI : (0.9994, 1)
-##     No Information Rate : 0.2845     
-##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16  
-##                                      
-##                   Kappa : 1          
-##  Mcnemar's Test P-Value : NA         
+##                                           
+##                Accuracy : 0.9941          
+##                  95% CI : (0.9917, 0.9959)
+##     No Information Rate : 0.2845          
+##     P-Value [Acc &gt; NIR] : &lt; 2.2e-16       
+##                                           
+##                   Kappa : 0.9925          
+##  Mcnemar's Test P-Value : NA              
 ## 
 ## Statistics by Class:
 ## 
 ##                      Class: A Class: B Class: C Class: D Class: E
-## Sensitivity            1.0000   1.0000   1.0000   1.0000   1.0000
-## Specificity            1.0000   1.0000   1.0000   1.0000   1.0000
-## Pos Pred Value         1.0000   1.0000   1.0000   1.0000   1.0000
-## Neg Pred Value         1.0000   1.0000   1.0000   1.0000   1.0000
+## Sensitivity            1.0000   0.9947   0.9912   0.9813   0.9982
+## Specificity            0.9991   0.9981   0.9961   0.9998   0.9996
+## Pos Pred Value         0.9976   0.9921   0.9817   0.9989   0.9982
+## Neg Pred Value         1.0000   0.9987   0.9981   0.9964   0.9996
 ## Prevalence             0.2845   0.1935   0.1743   0.1638   0.1839
-## Detection Rate         0.2845   0.1935   0.1743   0.1638   0.1839
-## Detection Prevalence   0.2845   0.1935   0.1743   0.1638   0.1839
-## Balanced Accuracy      1.0000   1.0000   1.0000   1.0000   1.0000</code></pre>
+## Detection Rate         0.2845   0.1925   0.1728   0.1607   0.1835
+## Detection Prevalence   0.2851   0.1941   0.1760   0.1609   0.1839
+## Balanced Accuracy      0.9995   0.9964   0.9937   0.9906   0.9989</code></pre>
 <p>The random forest model trained with the 5-fold cross validation showed the same metrics so we stay with the model that takes less time to be trained.</p>
 
 
